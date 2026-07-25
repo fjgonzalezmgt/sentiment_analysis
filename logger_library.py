@@ -30,13 +30,17 @@ Ejemplo mínimo:
     logger = setup_logger("app")
     logger.warning("Mensaje de prueba")
 
+Author
+------
+Francisco Gonzalez
+
 Fin de la documentación del módulo.
 """
 
 import logging
+import logging.handlers
 import os
 from typing import Optional
-import logging.handlers
 
 
 def setup_logger(
@@ -48,20 +52,29 @@ def setup_logger(
     backup_count: int = 5,
     fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 ) -> logging.Logger:
-    """
-    Configura y retorna un logger profesional con soporte para consola y archivo rotativo.
+    """Configurar un logger con consola y archivo rotativo.
 
-    Args:
-        name (str): Nombre del logger.
-        log_file (Optional[str]): Ruta del archivo de log. Si no se especifica, solo usa consola.
-        level (int): Nivel de log. Ej: logging.DEBUG, logging.INFO.
-        console (bool): Si se debe mostrar también por consola.
-        max_bytes (int): Tamaño máximo antes de rotar el archivo de log.
-        backup_count (int): Número de archivos de respaldo a mantener.
-        fmt (str): Formato de los mensajes de log.
+    Parameters
+    ----------
+    name : str
+        Nombre del logger.
+    log_file : str or None, default="events.log"
+        Ruta del archivo. Si se omite, solo se configura la consola.
+    level : int, default=logging.INFO
+        Nivel mínimo de registro.
+    console : bool, default=True
+        Indica si se habilita salida por consola.
+    max_bytes : int, default=2097152
+        Tamaño máximo del archivo antes de rotarlo.
+    backup_count : int, default=5
+        Número de respaldos rotativos.
+    fmt : str
+        Formato de los mensajes.
 
-    Returns:
-        logging.Logger: Logger configurado.
+    Returns
+    -------
+    logging.Logger
+        Logger configurado de manera idempotente.
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)

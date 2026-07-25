@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """Scraper de reseñas orientado a Trustpilot (archivo principal).
 
-Autores
--------
+Author
+------
 Francisco Gonzalez
-Vincent Martinez
 
 Resumen
 --------
@@ -130,16 +129,17 @@ import hashlib
 import json
 import os
 import re
-import sys
 import time
 import urllib.parse
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import List, Optional
 from urllib import robotparser
 from urllib.parse import urlparse
-from logger_library import setup_logger
+
 import requests
 from bs4 import BeautifulSoup
+
+from logger_library import setup_logger
 
 try:
     from playwright.sync_api import sync_playwright
@@ -438,7 +438,18 @@ def _is_trustpilot(url: str) -> bool:
 
 
 def _safe_filename_component(s: str | None) -> str:
-    """Convierte un texto en un componente seguro para nombre de archivo."""
+    """Convertir texto en un componente seguro para nombre de archivo.
+
+    Parameters
+    ----------
+    s : str or None
+        Texto original.
+
+    Returns
+    -------
+    str
+        Componente normalizado o ``reviews`` cuando está vacío.
+    """
     s = (s or "").strip()
     if not s:
         return "reviews"
@@ -449,10 +460,22 @@ def _safe_filename_component(s: str | None) -> str:
 
 
 def company_from_url(url: str) -> str:
-    """Extrae el identificador de empresa desde una URL de Trustpilot.
+    """Extraer el identificador de empresa desde una URL de Trustpilot.
 
-    Ejemplo:
-    - https://es.trustpilot.com/review/sending.es -> sending.es
+    Parameters
+    ----------
+    url : str
+        URL de un perfil de reseñas.
+
+    Returns
+    -------
+    str
+        Identificador seguro de la empresa.
+
+    Examples
+    --------
+    >>> company_from_url("https://es.trustpilot.com/review/sending.es")
+    'sending.es'
     """
     parsed = urlparse(url)
     path = parsed.path or ""
@@ -464,10 +487,22 @@ def company_from_url(url: str) -> str:
 
 
 def trustpilot_review_url(company_or_url: str) -> str:
-    """Construye la URL de reseñas de Trustpilot a partir de un nombre de empresa.
+    """Construir una URL de Trustpilot desde una empresa o URL.
 
-    Si se recibe una URL completa (http/https), se devuelve tal cual.
-    Ejemplo: "sending.es" -> "https://es.trustpilot.com/review/sending.es"
+    Parameters
+    ----------
+    company_or_url : str
+        Dominio, nombre corto o URL completa.
+
+    Returns
+    -------
+    str
+        URL de reseñas normalizada.
+
+    Examples
+    --------
+    >>> trustpilot_review_url("sending.es")
+    'https://es.trustpilot.com/review/sending.es'
     """
     s = (company_or_url or "").strip()
     if not s:
@@ -482,11 +517,26 @@ def trustpilot_review_url(company_or_url: str) -> str:
 
 
 def resolve_output_path(start_url: str, out_arg: str | None, company: str | None = None) -> str:
-    """Determina la ruta del CSV de salida.
+    """Resolver la ruta del CSV de salida.
 
-    - Si out_arg es None: genera review_data/trustpilot_reviews_<empresa>.csv
-    - Si out_arg es un directorio: crea el archivo dentro del directorio.
-    - Si out_arg apunta a archivo: lo respeta tal cual.
+    Parameters
+    ----------
+    start_url : str
+        URL usada para inferir la empresa.
+    out_arg : str or None
+        Archivo o directorio solicitado por el usuario.
+    company : str or None, default=None
+        Empresa explícita que tiene prioridad sobre la URL.
+
+    Returns
+    -------
+    str
+        Ruta del archivo CSV resultante.
+
+    Notes
+    -----
+    Cuando ``out_arg`` es ``None`` se usa
+    ``review_data/trustpilot_reviews_<empresa>.csv``.
     """
     company_name = _safe_filename_component(company) if company else company_from_url(start_url)
     default_name = f"trustpilot_reviews_{company_name}.csv"
@@ -535,6 +585,18 @@ def extract_from_jsonld(soup: BeautifulSoup, page_url: str) -> List[Review]:
             continue
 
         def _iter_nodes(x):
+            """Recorrer recursivamente nodos JSON-LD.
+
+            Parameters
+            ----------
+            x : Any
+                Nodo, lista de nodos o valor escalar.
+
+            Yields
+            ------
+            dict
+                Cada objeto encontrado en la estructura.
+            """
             if x is None:
                 return
             if isinstance(x, list):
@@ -897,7 +959,18 @@ def _maybe_append_review(
     r: Review,
     max_reviews: int | None,
 ) -> bool:
-    """Agrega reseña si aporta datos y no es duplicada.
+    """Agregar una reseña válida cuando no está duplicada.
+
+    Parameters
+    ----------
+    out : list[Review]
+        Lista de resultados acumulados.
+    seen : set[str]
+        Huellas ya procesadas.
+    r : Review
+        Reseña candidata.
+    max_reviews : int or None
+        Límite total opcional.
 
     Returns
     -------
@@ -1136,7 +1209,7 @@ def dedup_and_prune(reviews: List[Review]) -> List[Review]:
 
 
 def save_csv(reviews: List[Review], path: str):
-    """Guarda lista de reseñas en archivo CSV con codificación UTF-8-sig.
+    """Guardar reseñas en un CSV con codificación UTF-8-sig.
     
     La codificación utf-8-sig incluye BOM (Byte Order Mark) para
     compatibilidad con Microsoft Excel en Windows.
@@ -1147,6 +1220,11 @@ def save_csv(reviews: List[Review], path: str):
         Lista de reseñas a guardar.
     path : str
         Ruta del archivo CSV de salida.
+
+    Returns
+    -------
+    None
+        La función escribe el archivo.
     """
     fieldnames = list(asdict(Review(None, None, None, None, None, None, None, "")).keys())
     # utf-8-sig -> Excel en Windows muestra bien tildes/ñ
@@ -1196,15 +1274,23 @@ def parse_args() -> argparse.Namespace:
 
 
 def main(company: str | None = None, max_reviews: int | None = None):
-    """Función principal que orquesta el proceso completo de scraping.
+    """Orquestar el proceso completo de scraping.
+
+    Parameters
+    ----------
+    company : str or None, default=None
+        Empresa o dominio que sustituye la URL de la CLI.
+    max_reviews : int or None, default=None
+        Límite que sustituye el valor de la CLI.
+
+    Returns
+    -------
+    None
+        La función escribe el CSV configurado.
     
-    Flujo de ejecución:
-    1. Parsea argumentos de línea de comandos
-    2. Verifica permisos en robots.txt
-    3. Intenta scraping con requests
-    4. Si no hay resultados y --playwright está activo, usa Playwright
-    5. Deduplica y limpia resultados
-    6. Guarda reseñas en archivo CSV
+    Notes
+    -----
+    Primero usa ``requests`` y, cuando se solicita, Playwright como fallback.
     """
     logger = setup_logger("web_scrapping")
     args = parse_args()

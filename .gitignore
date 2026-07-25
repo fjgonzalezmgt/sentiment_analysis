@@ -97,6 +97,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -148,10 +150,15 @@ dmypy.json
 # Output directories
 output/
 review_data/
+output_test/
+review_data_test/
+chroma_data/
+.chroma/
 
 # IDE
 .vscode/
 .idea/
+.ruff_cache/
 *.swp
 *.swo
 *~

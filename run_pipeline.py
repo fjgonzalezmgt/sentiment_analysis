@@ -7,7 +7,7 @@ Este script ejecuta el pipeline end-to-end:
 2) Ejecuta scraping de reseñas con ``web_scrapping.py``.
 3) Ejecuta ``procesado_resenas``.
 4) Ejecuta ``llm_parse``.
-5) Ejecuta ``load_to_bigquery``.
+5) Persiste y vectoriza los resultados en Chroma.
 
 El Excel puede contener:
 - Una columna de empresa/dominio (por ejemplo ``Empresa``) con valores como
@@ -31,9 +31,12 @@ Opcional:
 
 Requisitos
 ----------
-- Variables/credenciales según los módulos invocados:
-    - ``OPENAI_API_KEY`` (para ``llm_parse``)
-    - Credenciales GCP JSON según ``load_to_bigquery.py``
+- ``OPENAI_API_KEY`` para clasificación y embeddings.
+- Chroma local persistente por defecto o servidor mediante ``CHROMA_HOST``.
+
+Author
+------
+Francisco Gonzalez
 """
 
 from __future__ import annotations
@@ -48,7 +51,7 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
-import load_to_bigquery
+import chroma_store
 import llm_parse
 import procesado_resenas
 import web_scrapping
@@ -320,11 +323,22 @@ def parse_args() -> argparse.Namespace:
         Argumentos parseados para controlar lectura del Excel y parámetros de
         scraping.
     """
-    ap = argparse.ArgumentParser(description="Ejecuta el pipeline completo (scrape -> procesado -> LLM -> BigQuery).")
+    ap = argparse.ArgumentParser(
+        description="Pipeline completo (scrape -> procesado -> OpenAI -> Chroma)."
+    )
     ap.add_argument("--empresas-xlsx", default="Empresas.xlsx", help="Ruta al Excel con el listado de empresas.")
     ap.add_argument("--sheet", default=None, help="Nombre de hoja (sheet) a leer. Si se omite, usa la primera.")
     ap.add_argument("--company-col", default=None, help="Nombre de columna para empresa/company (opcional).")
     ap.add_argument("--url-col", default=None, help="Nombre de columna para URL Trustpilot (opcional).")
+    ap.add_argument(
+        "--from-combined-csv",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Inicia en un resenas_combinadas.csv existente y omite Excel, "
+            "scraping y consolidación."
+        ),
+    )
 
     ap.add_argument("--timeout", type=int, default=25, help="Timeout (s) por request en scraping.")
     ap.add_argument("--pause", type=float, default=2.0, help="Pausa (s) entre páginas en scraping.")
@@ -332,15 +346,96 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--test-mode",
         action="store_true",
-        help="Modo pruebas: scrapea solo 3 reseñas por empresa y NO carga a BigQuery.",
+        help="Modo pruebas: procesa 3 reseñas por empresa de forma síncrona.",
+    )
+    ap.add_argument(
+        "--llm-mode",
+        choices=("batch", "sync"),
+        default="batch",
+        help="Batch API (producción, por defecto) o Responses API síncrona.",
+    )
+    ap.add_argument(
+        "--finalize-batch",
+        action="store_true",
+        help="Omite scraping, descarga el Batch terminado y carga el resultado a Chroma.",
+    )
+    ap.add_argument(
+        "--batch-id",
+        default=None,
+        help="ID opcional del Batch; si se omite se usa output/openai_batch_state.json.",
     )
     ap.add_argument("--playwright", action="store_true", help="Usa Playwright como fallback si requests no extrae.")
     ap.add_argument("--conservative", action="store_true", help="Aborta si robots.txt no es legible (modo conservador).")
     return ap.parse_args()
 
 
+def run_classification_stage(
+    combined_csv: str,
+    output_dir: str,
+    llm_mode: str,
+    *,
+    test_mode: bool = False,
+) -> None:
+    """Ejecutar clasificación y persistencia desde un CSV consolidado.
+
+    Parameters
+    ----------
+    combined_csv : str
+        Archivo ``resenas_combinadas.csv`` que contiene la columna ``body``.
+    output_dir : str
+        Directorio para resultados clasificados y estado Batch.
+    llm_mode : {"batch", "sync"}
+        Modo de ejecución de OpenAI.
+    test_mode : bool, default=False
+        Limita la clasificación a tres filas y fuerza modo síncrono.
+
+    Returns
+    -------
+    None
+        El modo síncrono carga Chroma; el modo Batch guarda el estado para
+        finalizarlo posteriormente.
+
+    Raises
+    ------
+    FileNotFoundError
+        Si ``combined_csv`` no existe.
+    """
+    logger = setup_logger("run_pipeline.classification")
+    if not os.path.isfile(combined_csv):
+        raise FileNotFoundError(f"No se encontró el CSV consolidado: {combined_csv}")
+
+    llm_out_xlsx = os.path.join(output_dir, "resenas_clasificadas.xlsx")
+    llm_out_csv = os.path.join(output_dir, "resenas_clasificadas.csv")
+    batch_state_path = os.path.join(output_dir, "openai_batch_state.json")
+
+    if test_mode or llm_mode == "sync":
+        logger.info("Clasificando con Responses API en modo síncrono...")
+        llm_parse.classify_sync(
+            input_csv=combined_csv,
+            output_xlsx=llm_out_xlsx,
+            output_csv=llm_out_csv,
+            max_rows=3 if test_mode else None,
+        )
+        stored = chroma_store.upsert_reviews(llm_out_xlsx)
+        logger.info("Pipeline completo: %s reseñas almacenadas en Chroma.", stored)
+        return
+
+    logger.info("Preparando y enviando clasificación mediante OpenAI Batch API...")
+    state = llm_parse.submit_batch(
+        input_csv=combined_csv,
+        batch_input_path=os.path.join(output_dir, "openai_batch_requests.jsonl"),
+        manifest_path=os.path.join(output_dir, "openai_batch_manifest.json"),
+        state_path=batch_state_path,
+    )
+    logger.info(
+        "Batch %s enviado. Cuando termine, ejecuta: "
+        "python run_pipeline.py --finalize-batch",
+        state["batch_id"],
+    )
+
+
 def main() -> None:
-    """Ejecuta el pipeline completo (scrape -> procesado -> LLM -> BigQuery).
+    """Ejecuta el pipeline completo (scrape -> procesado -> LLM -> Chroma).
 
     Returns
     -------
@@ -348,6 +443,8 @@ def main() -> None:
 
     Raises
     ------
+    FileNotFoundError
+        Si el CSV consolidado indicado no existe.
     RuntimeError
         Si el Excel no contiene empresas válidas.
     """
@@ -357,9 +454,38 @@ def main() -> None:
     max_reviews = 3 if args.test_mode else None
     review_data_dir = "review_data_test" if args.test_mode else "review_data"
     output_dir = "output_test" if args.test_mode else "output"
+    llm_out_xlsx = os.path.join(output_dir, "resenas_clasificadas.xlsx")
+    llm_out_csv = os.path.join(output_dir, "resenas_clasificadas.csv")
+    batch_state_path = os.path.join(output_dir, "openai_batch_state.json")
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(review_data_dir, exist_ok=True)
+
+    if args.finalize_batch:
+        result = llm_parse.finalize_batch(
+            state_path=batch_state_path,
+            batch_id=args.batch_id,
+            output_xlsx=llm_out_xlsx,
+            output_csv=llm_out_csv,
+        )
+        if result is None:
+            logger.info("El Batch aún no terminó; no se modifica Chroma.")
+            return
+        stored = chroma_store.upsert_reviews(llm_out_xlsx)
+        logger.info("Pipeline finalizado: %s reseñas almacenadas en Chroma.", stored)
+        return
+
+    if args.from_combined_csv:
+        logger.info(
+            "Inicio desde CSV consolidado: se omiten scraping y procesamiento."
+        )
+        run_classification_stage(
+            combined_csv=args.from_combined_csv,
+            output_dir=output_dir,
+            llm_mode=args.llm_mode,
+            test_mode=args.test_mode,
+        )
+        return
 
     # En modo pruebas, evita mezclar con datos de ejecuciones anteriores.
     if args.test_mode:
@@ -408,21 +534,12 @@ def main() -> None:
         output_csv=combined_csv,
     )
 
-    logger.info("Ejecutando llm_parse...")
-    llm_out_xlsx = os.path.join(output_dir, "resenas_clasificadas.xlsx")
-    llm_parse.main(
-        input_csv=combined_csv,
-        output_xlsx=llm_out_xlsx,
-        max_rows=3 if args.test_mode else None,
+    run_classification_stage(
+        combined_csv=combined_csv,
+        output_dir=output_dir,
+        llm_mode=args.llm_mode,
+        test_mode=args.test_mode,
     )
-
-    if args.test_mode:
-        logger.info("Modo pruebas activo: se omite load_to_bigquery.")
-    else:
-        logger.info("Ejecutando load_to_bigquery...")
-        load_to_bigquery.main()
-
-    logger.info("Pipeline completo finalizado.")
 
 
 if __name__ == "__main__":

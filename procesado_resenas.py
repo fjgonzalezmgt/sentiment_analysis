@@ -1,9 +1,9 @@
 """
 Módulo: procesado_resenas.py
 
-Autores:
-    Francisco Gonzalez
-    Vincent Martinez
+Author
+------
+Francisco Gonzalez
 
 Fecha de creación: 2025
 Universidad: Universidad Galileo
@@ -83,44 +83,49 @@ Workflow típico:
     4. Verificar logs para confirmar que todas las operaciones se completaron exitosamente.
 """
 
-import pandas as pd
 import os
+
+import pandas as pd
+
 from logger_library import setup_logger
 
+
 def cargar_resenas_csv(carpeta: str) -> pd.DataFrame:
-    """
-    Carga todos los archivos CSV de reseñas desde una carpeta y los combina en un único DataFrame.
+    """Cargar y combinar todos los CSV de reseñas de una carpeta.
     
     Esta función busca todos los archivos .csv en la carpeta especificada, los lee uno por uno,
     extrae el nombre de la compañía del nombre del archivo (removiendo el prefijo 
     'trustpilot_reviews_'), añade una columna 'company' con ese nombre en mayúsculas, y 
     finalmente concatena todos los DataFrames en uno solo.
     
-    Args:
-        carpeta (str): Ruta de la carpeta que contiene los archivos CSV de reseñas.
-                      Se espera que los archivos sigan el patrón de nombre 
-                      'trustpilot_reviews_<COMPANY>.csv'.
-    
-    Returns:
-        pd.DataFrame: DataFrame concatenado con todas las reseñas de todos los archivos CSV.
-                     Incluye todas las columnas originales más la columna 'company' que 
-                     identifica la empresa de cada reseña.
-    
-    Raises:
-        FileNotFoundError: Si no se encuentran archivos CSV en la carpeta especificada.
-    
-    Ejemplo:
+    Parameters
+    ----------
+    carpeta : str
+        Carpeta cuyos archivos siguen el patrón
+        ``trustpilot_reviews_<COMPANY>.csv``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Reseñas concatenadas con una columna adicional ``company``.
+
+    Raises
+    ------
+    FileNotFoundError
+        Si no se encuentran archivos CSV.
+
+    Examples
+    --------
         >>> df = cargar_resenas_csv("review_data")
         >>> print(df.columns)
         Index(['review_id', 'rating', 'text', 'date', 'company', ...])
-        >>> print(df['company'].unique())
+        >>> print(df["company"].unique())
         ['ALIEXPRESS', 'DHL', 'GENEI.ES', ...]
-    
-    Notas:
-        - Los nombres de archivo deben seguir el patrón 'trustpilot_reviews_<COMPANY>.csv'
-        - El nombre de la compañía se convierte a mayúsculas automáticamente
-        - Se utiliza logging para registrar el proceso de carga
-        - Todos los DataFrames se concatenan con ignore_index=True para crear un índice continuo
+
+    Notes
+    -----
+    Los nombres de empresa se convierten a mayúsculas y el índice final se
+    reconstruye de forma continua.
     """
     logger = setup_logger("cargar_resenas_csv")
     logger.info(f"Cargando reseñas desde la carpeta: {carpeta}")
@@ -143,69 +148,78 @@ def cargar_resenas_csv(carpeta: str) -> pd.DataFrame:
     return data
 
 def guardar_resenas_excel(df: pd.DataFrame, ruta_salida: str) -> None:
-    """
-    Guarda un DataFrame de reseñas en formato Excel (.xlsx).
+    """Guardar un DataFrame de reseñas en formato Excel.
     
     Exporta el DataFrame proporcionado a un archivo Excel sin incluir el índice.
     El directorio de destino debe existir previamente; la función no crea 
     directorios automáticamente.
     
-    Args:
-        df (pd.DataFrame): DataFrame que contiene las reseñas a guardar.
-        ruta_salida (str): Ruta completa del archivo Excel de destino, incluyendo 
-                          el nombre del archivo y la extensión .xlsx.
-    
-    Returns:
-        None
-    
-    Raises:
-        PermissionError: Si no hay permisos de escritura en la ruta de destino.
-        FileNotFoundError: Si el directorio padre no existe.
-    
-    Ejemplo:
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Reseñas que se desean guardar.
+    ruta_salida : str
+        Archivo ``.xlsx`` de destino.
+
+    Returns
+    -------
+    None
+        La función escribe el archivo y registra la operación.
+
+    Raises
+    ------
+    PermissionError
+        Si no existen permisos de escritura.
+    FileNotFoundError
+        Si el directorio padre no existe.
+
+    Examples
+    --------
         >>> df = pd.DataFrame({'company': ['DHL', 'ALIEXPRESS'], 'rating': [5, 4]})
         >>> guardar_resenas_excel(df, "output/resenas_combinadas.xlsx")
-        # Archivo guardado exitosamente
-    
-    Notas:
-        - Requiere que pandas tenga instalada la dependencia openpyxl para Excel
-        - El archivo se guarda sin índice (index=False)
-        - Se registra la operación en el log
+
+    Notes
+    -----
+    El archivo se escribe sin índice y requiere ``openpyxl``.
     """
     logger = setup_logger("guardar_resenas_excel")
     df.to_excel(ruta_salida, index=False)
     logger.info(f"Reseñas guardadas en: {ruta_salida}")
     
 def guardar_resenas_csv(df: pd.DataFrame, ruta_salida: str) -> None:
-    """
-    Guarda un DataFrame de reseñas en formato CSV.
+    """Guardar un DataFrame de reseñas en formato CSV.
     
     Exporta el DataFrame proporcionado a un archivo CSV sin incluir el índice.
     El directorio de destino debe existir previamente; la función no crea 
     directorios automáticamente.
     
-    Args:
-        df (pd.DataFrame): DataFrame que contiene las reseñas a guardar.
-        ruta_salida (str): Ruta completa del archivo CSV de destino, incluyendo 
-                          el nombre del archivo y la extensión .csv.
-    
-    Returns:
-        None
-    
-    Raises:
-        PermissionError: Si no hay permisos de escritura en la ruta de destino.
-        FileNotFoundError: Si el directorio padre no existe.
-    
-    Ejemplo:
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Reseñas que se desean guardar.
+    ruta_salida : str
+        Archivo ``.csv`` de destino.
+
+    Returns
+    -------
+    None
+        La función escribe el archivo y registra la operación.
+
+    Raises
+    ------
+    PermissionError
+        Si no existen permisos de escritura.
+    FileNotFoundError
+        Si el directorio padre no existe.
+
+    Examples
+    --------
         >>> df = pd.DataFrame({'company': ['DHL', 'ALIEXPRESS'], 'rating': [5, 4]})
         >>> guardar_resenas_csv(df, "output/resenas_combinadas.csv")
-        # Archivo guardado exitosamente
-    
-    Notas:
-        - El archivo se guarda sin índice (index=False)
-        - Usa la codificación por defecto de pandas (generalmente UTF-8)
-        - Se registra la operación en el log
-        - Formato compatible con Excel y otras herramientas de análisis de datos
+
+    Notes
+    -----
+    El archivo se escribe sin índice.
     """
     logger = setup_logger("guardar_resenas_csv")
     df.to_csv(ruta_salida, index=False)
@@ -216,8 +230,7 @@ def main(
     output_xlsx: str = "output/resenas_combinadas.xlsx",
     output_csv: str = "output/resenas_combinadas.csv",
 ):
-    """
-    Función principal que ejecuta el pipeline completo de procesamiento de reseñas.
+    """Ejecutar la consolidación y limpieza de reseñas.
     
     Este es el punto de entrada del script. Realiza las siguientes operaciones en orden:
     1. Carga todas las reseñas desde archivos CSV en la carpeta 'review_data'
@@ -227,36 +240,30 @@ def main(
     5. Exporta las reseñas procesadas a formato Excel
     6. Exporta las reseñas procesadas a formato CSV
     
-    Variables configurables:
-        carpeta_entrada: Define la carpeta donde se buscarán los archivos CSV de entrada.
-                        Por defecto: "review_data"
-    
-    Archivos de salida generados:
-        - output/resenas_combinadas.xlsx: Archivo Excel con todas las reseñas procesadas
-        - output/resenas_combinadas.csv: Archivo CSV con todas las reseñas procesadas
-    
-    Proceso de limpieza de datos:
-        - Eliminación de compañía SAMPLE: Remueve datos de prueba o ejemplos
-        - Eliminación de valores nulos en review_id: Asegura que todas las reseñas 
-          tengan un identificador válido
-        - Eliminación de duplicados: Mantiene solo una instancia de cada review_id único
-    
-    Returns:
-        None
-    
-    Raises:
-        FileNotFoundError: Si la carpeta 'review_data' no contiene archivos CSV
-        PermissionError: Si no hay permisos para escribir en la carpeta 'output'
-    
-    Ejemplo de uso:
-        >>> if __name__ == "__main__":
-        >>>     main()
-        # Procesa todos los archivos CSV y genera los archivos de salida
-    
-    Notas:
-        - La carpeta 'output' debe existir antes de ejecutar el script
-        - Se utiliza logging para rastrear todo el proceso
-        - Las operaciones de limpieza se realizan in-place para eficiencia de memoria
+    Parameters
+    ----------
+    carpeta_entrada : str, default="review_data"
+        Carpeta de archivos CSV.
+    output_xlsx : str, default="output/resenas_combinadas.xlsx"
+        Archivo Excel consolidado.
+    output_csv : str, default="output/resenas_combinadas.csv"
+        Archivo CSV consolidado.
+
+    Returns
+    -------
+    None
+        La función genera ambos archivos de salida.
+
+    Raises
+    ------
+    FileNotFoundError
+        Si la carpeta no contiene CSV.
+    PermissionError
+        Si los destinos no permiten escritura.
+
+    Notes
+    -----
+    Se eliminan registros ``SAMPLE``, identificadores nulos y duplicados.
     """
     logger = setup_logger("procesado_resenas")
     
