@@ -125,7 +125,7 @@ def chroma_where(dataframe: pd.DataFrame) -> dict[str, Any] | None:
     for column in ("company", "sentiment_label", "general_category"):
         values = dataframe[column].dropna().unique().tolist()
         if len(values) == 1:
-            conditions.append({column: values[0]})
+            conditions.append({column: {"$eq": values[0]}})
     if not conditions:
         return None
     return conditions[0] if len(conditions) == 1 else {"$and": conditions}
