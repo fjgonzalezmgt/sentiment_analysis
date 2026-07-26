@@ -42,6 +42,22 @@ playwright install chromium
 
 La instalación de Chromium solo hace falta si se usa `--playwright`.
 
+## Panel de análisis
+
+El panel Streamlit combina las clasificaciones tabulares con la búsqueda
+semántica persistida en Chroma. Usa por defecto
+`output/resenas_clasificadas.xlsx` y permite seleccionar otro CSV o Excel
+clasificado desde la barra lateral.
+
+```powershell
+conda run -n sentiment-analysis streamlit run dashboard.py
+```
+
+Incluye filtros por empresa, sentimiento, categoría, valoración y periodo;
+comparativas Plotly; detalle de reseñas; y una consulta semántica a Chroma
+restringida por los filtros activos. La búsqueda necesita la misma
+configuración de Chroma y `OPENAI_API_KEY` que el pipeline.
+
 Copiar la configuración de ejemplo y conservar la clave existente:
 
 ```powershell
@@ -62,7 +78,7 @@ Si ya existe `output/resenas_combinadas.csv`, se puede omitir la lectura de
 empresas, el scraping y la consolidación:
 
 ```powershell
-conda run -n sentiment-analysis python run_pipeline.py --from-combined-csv "C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\sentiment_analysis\output\resenas_combinadas.csv"
+conda run -n sentiment-analysis python run_pipeline.py --from-combined-csv "output\resenas_combinadas.csv"
 ```
 
 El comando usa Batch API de forma predeterminada. Cuando termine:
