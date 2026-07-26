@@ -334,19 +334,7 @@ cultureInfo en-US
 			          "ConceptualProperty": "Mes de publicación"
 			        }
 			      },
-			      "State": "Generated",
-			      "Terms": [
-			        {
-			          "Mes de publicación": {
-			            "State": "Suggested",
-			            "Source": {
-			              "Type": "External",
-			              "Agent": "PowerBI.VisualColumnRename"
-			            },
-			            "Weight": 0.9
-			          }
-			        }
-			      ]
+			      "State": "Generated"
 			    }
 			  },
 			  "Agents": {
