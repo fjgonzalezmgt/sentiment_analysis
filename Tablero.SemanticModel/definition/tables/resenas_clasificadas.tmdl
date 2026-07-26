@@ -143,6 +143,23 @@ table resenas_clasificadas
 
 		annotation SummarizationSetBy = Automatic
 
+	column 'Mes de publicación orden' = DATE(YEAR(resenas_clasificadas[date_published]), MONTH(resenas_clasificadas[date_published]), 1)
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-MM
+		lineageTag: 90e6a7d1-1c2f-4b8e-9a3d-6f5c7e2b4a19
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Mes de publicación' = FORMAT(resenas_clasificadas[date_published], "yyyy-MM")
+		dataType: string
+		lineageTag: 6d3b8f1a-5c7e-4a29-b2d6-9e1f3c8a7b54
+		summarizeBy: none
+		sortByColumn: 'Mes de publicación orden'
+
+		annotation SummarizationSetBy = Automatic
+
 	partition resenas_clasificadas = m
 		mode: import
 		source =
