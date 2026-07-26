@@ -1,5 +1,12 @@
 # Análisis profesional de reseñas con OpenAI GPT‑5.6 y Chroma
 
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--5.6-412991?logo=openai&logoColor=white)](https://platform.openai.com/)
+[![Chroma](https://img.shields.io/badge/Chroma-Vector%20Database-FF6F61)](https://www.trychroma.com/)
+[![Pandas](https://img.shields.io/badge/Pandas-Data%20Processing-150458?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Power BI](https://img.shields.io/badge/Power%20BI-Analytics-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com/)
+
 Pipeline reproducible para extraer reseñas, normalizarlas, clasificarlas con
 salidas estructuradas y almacenarlas en Chroma para búsqueda semántica. Los
 resultados también se conservan en CSV/Excel para Power BI.
