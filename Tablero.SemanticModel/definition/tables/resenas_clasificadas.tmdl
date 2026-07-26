@@ -1,0 +1,158 @@
+table resenas_clasificadas
+	lineageTag: 0433d214-7509-4ae9-929c-af1afbf65d28
+
+	measure 'Total resenas' = COUNTROWS(resenas_clasificadas)
+		formatString: #,0
+		lineageTag: 1d8602fd-27b6-4b7f-a43f-c5b02712e9a6
+
+	measure 'Calificacion media' = AVERAGE(resenas_clasificadas[rating])
+		formatString: 0.0
+		lineageTag: 72a1d307-3691-44ea-bd11-8b2361d0539e
+
+	measure '% positivas' = DIVIDE(CALCULATE([Total resenas], resenas_clasificadas[sentiment_label] = "Positiva"), [Total resenas])
+		formatString: 0.0%
+		lineageTag: 9d9c649f-f3b8-47e4-9373-214ae18402dc
+
+	measure '% negativas' = DIVIDE(CALCULATE([Total resenas], resenas_clasificadas[sentiment_label] = "Negativa"), [Total resenas])
+		formatString: 0.0%
+		lineageTag: 3b40f0fc-9b8b-43be-8e51-ae411f023f40
+
+	measure 'Resenas negativas' = CALCULATE([Total resenas], resenas_clasificadas[sentiment_label] = "Negativa")
+		formatString: #,0
+		lineageTag: 6ec6f53c-4a50-481b-9f37-0c136db3eaa7
+
+	measure 'Principal friccion' = VAR TopCategoria = TOPN(1, ADDCOLUMNS(VALUES(resenas_clasificadas[specific_category]), "@ResenasNegativas", CALCULATE([Resenas negativas])), [@ResenasNegativas], DESC, resenas_clasificadas[specific_category], ASC) RETURN CONCATENATEX(TopCategoria, resenas_clasificadas[specific_category], "")
+		lineageTag: 28ea2c1a-9cf5-4e4c-94d9-1ceece8e90a3
+
+	column review_id
+		dataType: string
+		lineageTag: c47e1612-95d5-4273-8ab9-a5f4d4cca2d8
+		summarizeBy: none
+		sourceColumn: review_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column title
+		dataType: string
+		lineageTag: 5353ed21-fb05-4c51-918f-e65c84648e44
+		summarizeBy: none
+		sourceColumn: title
+
+		annotation SummarizationSetBy = Automatic
+
+	column body
+		dataType: string
+		lineageTag: aaf7d8df-0f91-4993-8da0-62cd05bac6b3
+		summarizeBy: none
+		sourceColumn: body
+
+		annotation SummarizationSetBy = Automatic
+
+	column rating
+		dataType: int64
+		formatString: 0
+		lineageTag: 4edbdc5d-c3dd-41b1-9088-15345df35ac4
+		summarizeBy: sum
+		sourceColumn: rating
+
+		annotation SummarizationSetBy = Automatic
+
+	column author
+		dataType: string
+		lineageTag: 388b3f89-b614-49dd-8dbb-601281513c21
+		summarizeBy: none
+		sourceColumn: author
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_published
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: 6cec413e-1203-4654-a7b0-aae873ef6754
+		summarizeBy: none
+		sourceColumn: date_published
+
+		variation Variación
+			isDefault
+			relationship: be6e7b5b-4cd4-40c9-8299-8a5d7c1a47e6
+			defaultHierarchy: LocalDateTable_c913a22e-6e0f-47b2-a4e2-f1f62a092ec3.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column location
+		dataType: string
+		lineageTag: bd3a041d-d0c3-4650-98af-1acbe49a8b7e
+		summarizeBy: none
+		sourceColumn: location
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_url
+		dataType: string
+		lineageTag: 556b317c-4e23-4500-b4f1-ab1a0699dad8
+		summarizeBy: none
+		sourceColumn: source_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column company
+		dataType: string
+		lineageTag: c458efff-bd11-4715-8c1f-5f3afb296678
+		summarizeBy: none
+		sourceColumn: company
+
+		annotation SummarizationSetBy = Automatic
+
+	column review
+		dataType: string
+		lineageTag: 0394426e-3ae4-47e0-9262-5cfce6368371
+		summarizeBy: none
+		sourceColumn: review
+
+		annotation SummarizationSetBy = Automatic
+
+	column sentiment_label
+		dataType: string
+		lineageTag: de5ccf8b-e6f2-4614-a97c-eaa36abd00f2
+		summarizeBy: none
+		sourceColumn: sentiment_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column general_category
+		dataType: string
+		lineageTag: 7816887f-7605-4f65-8ff5-6771e399d2f9
+		summarizeBy: none
+		sourceColumn: general_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column specific_category
+		dataType: string
+		lineageTag: 7be31ab0-863c-435b-ba5b-e4996b6479a6
+		summarizeBy: none
+		sourceColumn: specific_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column classification_error
+		dataType: string
+		lineageTag: 32dd7eae-8839-4b79-b7fc-3f0e7364a4a4
+		summarizeBy: none
+		sourceColumn: classification_error
+
+		annotation SummarizationSetBy = Automatic
+
+	partition resenas_clasificadas = m
+		mode: import
+		source =
+				let
+				  Origen = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\sentiment_analysis\output\resenas_clasificadas.xlsx"), null, true),
+				  #"Navegación 1" = Origen{[Item = "Sheet1", Kind = "Sheet"]}[Data],
+				  #"Encabezados promovidos" = Table.PromoteHeaders(#"Navegación 1", [PromoteAllScalars = true]),
+				  #"Tipo de columna cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos", {{"review_id", type text}, {"body", type text}, {"rating", Int64.Type}, {"author", type text}, {"date_published", type datetime}, {"source_url", type text}, {"company", type text}, {"review", type text}, {"sentiment_label", type text}, {"general_category", type text}, {"specific_category", type text}}, "es")
+				in
+				  #"Tipo de columna cambiado"
+
+	changedProperty = Name
+

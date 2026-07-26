@@ -131,6 +131,14 @@ comparativas Plotly; detalle de reseñas; y una consulta semántica a Chroma
 restringida por los filtros activos. La búsqueda necesita la misma
 configuración de Chroma y `OPENAI_API_KEY` que el pipeline.
 
+## Informe de Power BI
+
+El informe publicado en Power BI presenta el análisis tabular generado por el
+pipeline. Está disponible en [Análisis de sentimiento de reseñas](https://app.powerbi.com/view?r=eyJrIjoiNWJkOGU4NGYtY2E3MS00MDhkLWJiYjItMjZiZjY3NzQ0N2M3IiwidCI6IjVkMjFhNmQ1LWIzODMtNGUxMi1hYjFiLTY3YTUxNWZmM2RhOCIsImMiOjR9).
+
+El proyecto editable está incluido como `Tablero Sentiment Analysis.pbip` y
+consume las salidas clasificadas del pipeline para actualizar las visualizaciones.
+
 Copiar la configuración de ejemplo y conservar la clave existente:
 
 ```powershell

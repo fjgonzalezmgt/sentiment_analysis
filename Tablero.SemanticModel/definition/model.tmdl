@@ -1,0 +1,20 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-GT
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_QueryOrder = ["resenas_clasificadas"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table resenas_clasificadas
+ref table DateTableTemplate_493f9c17-9a1a-4da5-8363-03b9178210f8
+ref table LocalDateTable_c913a22e-6e0f-47b2-a4e2-f1f62a092ec3
+
+ref cultureInfo en-US
+
