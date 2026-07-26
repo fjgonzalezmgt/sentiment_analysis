@@ -154,5 +154,3 @@ table resenas_clasificadas
 				in
 				  #"Tipo de columna cambiado"
 
-	changedProperty = Name
-

@@ -118,6 +118,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Local launchers
+run_dashboard.bat
 .dmypy.json
 dmypy.json
 
